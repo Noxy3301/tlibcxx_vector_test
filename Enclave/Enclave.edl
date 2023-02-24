@@ -61,7 +61,7 @@ enclave {
     trusted {
         public void ecall_vector_init();
         public void ecall_vector_loop();
-        public uint64_t ecall_getNormalResult(int index);
+        public uint64_t ecall_getIndexResult(int index);
         public uint64_t ecall_getIteratorResult(int index);
     };
 

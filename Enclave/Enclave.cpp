@@ -66,7 +66,7 @@ static uint64_t rdtscp() {
 }
 
 std::vector<int> e_test;
-std::vector<uint64_t> e_normal_result;
+std::vector<uint64_t> e_index_result;
 std::vector<uint64_t> e_iterator_result;
 
 void ecall_vector_init() {
@@ -84,8 +84,8 @@ void ecall_vector_loop() {
             assert(e_test[pos] == pos);
         }
         ee = rdtscp();
-        // printf("normal_loop:%d\t%ld\n", i, ee - ss);
-        e_normal_result.emplace_back(ee - ss);
+        // printf("index_loop:%d\t%ld\n", i, ee - ss);
+        e_index_result.emplace_back(ee - ss);
     }
 
     for (int i = 0; i < 10; i++) {
@@ -101,8 +101,8 @@ void ecall_vector_loop() {
     }
 }
 
-uint64_t ecall_getNormalResult(int index) {
-    return e_normal_result[index];
+uint64_t ecall_getIndexResult(int index) {
+    return e_index_result[index];
 }
 
 uint64_t ecall_getIteratorResult(int index) {

@@ -47,6 +47,7 @@
 #include <stdint.h>
 #include <iostream>
 #define TUPLE_NUM 10000000
+#define CLOCKS_PER_US 2900
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -59,86 +60,25 @@ typedef struct _sgx_errlist_t {
 
 /* Error code returned by sgx_create_enclave */
 static sgx_errlist_t sgx_errlist[] = {
-    {
-        SGX_ERROR_UNEXPECTED,
-        "Unexpected error occurred.",
-        NULL
-    },
-    {
-        SGX_ERROR_INVALID_PARAMETER,
-        "Invalid parameter.",
-        NULL
-    },
-    {
-        SGX_ERROR_OUT_OF_MEMORY,
-        "Out of memory.",
-        NULL
-    },
-    {
-        SGX_ERROR_ENCLAVE_LOST,
-        "Power transition occurred.",
-        "Please refer to the sample \"PowerTransition\" for details."
-    },
-    {
-        SGX_ERROR_INVALID_ENCLAVE,
-        "Invalid enclave image.",
-        NULL
-    },
-    {
-        SGX_ERROR_INVALID_ENCLAVE_ID,
-        "Invalid enclave identification.",
-        NULL
-    },
-    {
-        SGX_ERROR_INVALID_SIGNATURE,
-        "Invalid enclave signature.",
-        NULL
-    },
-    {
-        SGX_ERROR_OUT_OF_EPC,
-        "Out of EPC memory.",
-        NULL
-    },
-    {
-        SGX_ERROR_NO_DEVICE,
-        "Invalid SGX device.",
-        "Please make sure SGX module is enabled in the BIOS, and install SGX driver afterwards."
-    },
-    {
-        SGX_ERROR_MEMORY_MAP_CONFLICT,
-        "Memory map conflicted.",
-        NULL
-    },
-    {
-        SGX_ERROR_INVALID_METADATA,
-        "Invalid enclave metadata.",
-        NULL
-    },
-    {
-        SGX_ERROR_DEVICE_BUSY,
-        "SGX device was busy.",
-        NULL
-    },
-    {
-        SGX_ERROR_INVALID_VERSION,
-        "Enclave version was invalid.",
-        NULL
-    },
-    {
-        SGX_ERROR_INVALID_ATTRIBUTE,
-        "Enclave was not authorized.",
-        NULL
-    },
-    {
-        SGX_ERROR_ENCLAVE_FILE_ACCESS,
-        "Can't open enclave file.",
-        NULL
-    },
+    {SGX_ERROR_UNEXPECTED,"Unexpected error occurred.",NULL},
+    {SGX_ERROR_INVALID_PARAMETER,"Invalid parameter.",NULL},
+    {SGX_ERROR_OUT_OF_MEMORY,"Out of memory.",NULL},
+    {SGX_ERROR_ENCLAVE_LOST,"Power transition occurred.","Please refer to the sample \"PowerTransition\" for details."},
+    {SGX_ERROR_INVALID_ENCLAVE,"Invalid enclave image.",NULL},
+    {SGX_ERROR_INVALID_ENCLAVE_ID,"Invalid enclave identification.",NULL},
+    {SGX_ERROR_INVALID_SIGNATURE,"Invalid enclave signature.",NULL},
+    {SGX_ERROR_OUT_OF_EPC,"Out of EPC memory.",NULL},
+    {SGX_ERROR_NO_DEVICE,"Invalid SGX device.","Please make sure SGX module is enabled in the BIOS, and install SGX driver afterwards."},
+    {SGX_ERROR_MEMORY_MAP_CONFLICT,"Memory map conflicted.",NULL},
+    {SGX_ERROR_INVALID_METADATA,"Invalid enclave metadata.",NULL},
+    {SGX_ERROR_DEVICE_BUSY,"SGX device was busy.",NULL},
+    {SGX_ERROR_INVALID_VERSION,"Enclave version was invalid.",NULL},
+    {SGX_ERROR_INVALID_ATTRIBUTE,"Enclave was not authorized.",NULL},
+    {SGX_ERROR_ENCLAVE_FILE_ACCESS,"Can't open enclave file.",NULL},
 };
 
 /* Check error conditions for loading enclave */
-void print_error_message(sgx_status_t ret)
-{
+void print_error_message(sgx_status_t ret) {
     size_t idx = 0;
     size_t ttl = sizeof sgx_errlist/sizeof sgx_errlist[0];
 
@@ -158,8 +98,7 @@ void print_error_message(sgx_status_t ret)
 /* Initialize the enclave:
  *   Call sgx_create_enclave to initialize an enclave instance
  */
-int initialize_enclave(void)
-{
+int initialize_enclave(void) {
     sgx_status_t ret = SGX_ERROR_UNEXPECTED;
     
     /* Call sgx_create_enclave to initialize an enclave instance */
@@ -174,8 +113,7 @@ int initialize_enclave(void)
 }
 
 /* OCall functions */
-void ocall_print_string(const char *str)
-{
+void ocall_print_string(const char *str) {
     /* Proxy/Bridge will check the length and null-terminate 
      * the input string to prevent buffer overflow. 
      */
@@ -184,10 +122,10 @@ void ocall_print_string(const char *str)
 
 
 std::vector<int> test;
-std::vector<uint64_t> normal_result;
+std::vector<uint64_t> index_result;
 std::vector<uint64_t> iterator_result;
 
-std::vector<uint64_t> e_normal_result;
+std::vector<uint64_t> e_index_result;
 std::vector<uint64_t> e_iterator_result;
 
 static uint64_t rdtscp() {
@@ -201,10 +139,13 @@ static uint64_t rdtscp() {
     return (rdx << 32) | rax;
 }
 
+uint64_t convert2ms(uint64_t time) {
+    return time / (CLOCKS_PER_US * 1000);
+}
+
 
 /* Application entry */
-int SGX_CDECL main(int argc, char *argv[])
-{
+int SGX_CDECL main(int argc, char *argv[]) {
     (void)(argc);
     (void)(argv);
 
@@ -229,8 +170,8 @@ int SGX_CDECL main(int argc, char *argv[])
             assert(test[pos] == pos);
         }
         ee = rdtscp();
-        // printf("normal_loop:%d\t%ld\n", i, ee - ss);
-        normal_result.emplace_back(ee - ss);
+        // printf("index_loop:%d\t%ld\n", i, ee - ss);
+        index_result.emplace_back(ee - ss);
     }
 
     for (int i = 0; i < 10; i++) {
@@ -248,20 +189,20 @@ int SGX_CDECL main(int argc, char *argv[])
     ecall_vector_init(global_eid);
     ecall_vector_loop(global_eid);
 
-    std::cout << "\t\t" << "enclave\t\t" << "not enclave\t" << "(enclave)/(not enclave)" << std::endl;
+    std::cout << "\t\t" << "tlibcxx\t" << "STL\t" << "(STL)/(tlibcxx)" << std::endl;
     for (int i = 0; i < 10; i++) {
         uint64_t ret;
-        ecall_getNormalResult(global_eid, &ret, i);
-        e_normal_result.emplace_back(ret);
-        std::cout << "normal_loop:" << i << "\t" << ret << "\t" << normal_result[i] << "\t" << (double)ret/(double)normal_result[i] << std::endl;
+        ecall_getIndexResult(global_eid, &ret, i);
+        e_index_result.emplace_back(ret);
+        std::cout << "index_loop:" << i << "\t" << convert2ms(ret) << "ms\t" << convert2ms(index_result[i]) << "ms\t" << (double)index_result[i]/(double)ret << std::endl;
     }
-    uint64_t sum_normal_ne = 0;
-    uint64_t sum_normal_e = 0;
+    uint64_t sum_index_ne = 0;
+    uint64_t sum_index_e = 0;
     for (int i = 0; i < 10; i++) {
-        sum_normal_ne += normal_result[i];
-        sum_normal_e += e_normal_result[i];
+        sum_index_ne += index_result[i];
+        sum_index_e += e_index_result[i];
     }
-    std::cout << "[average]\t" << sum_normal_e/10 << "\t" << sum_normal_ne/10 << "\t" <<  (double)sum_normal_e/(double)sum_normal_ne << std::endl;
+    std::cout << "[average]\t" << convert2ms(sum_index_e/10) << "ms\t" << convert2ms(sum_index_ne/10) << "ms\t" <<  (double)sum_index_ne/(double)sum_index_e << std::endl;
 
     std::cout << std::endl;
 
@@ -269,7 +210,7 @@ int SGX_CDECL main(int argc, char *argv[])
         uint64_t ret;
         ecall_getIteratorResult(global_eid, &ret, i);
         e_iterator_result.emplace_back(ret);
-        std::cout << "iterator_loop:" << i << "\t" << ret << "\t" << iterator_result[i] << "\t" << (double)ret/(double)iterator_result[i] << std::endl;
+        std::cout << "iterator_loop:" << i << "\t" << convert2ms(ret) << "ms\t" << convert2ms(iterator_result[i]) << "ms\t" << (double)iterator_result[i]/(double)ret << std::endl;
     }
     uint64_t sum_iterator_ne = 0;
     uint64_t sum_iterator_e = 0;
@@ -277,7 +218,7 @@ int SGX_CDECL main(int argc, char *argv[])
         sum_iterator_ne += iterator_result[i];
         sum_iterator_e += e_iterator_result[i];
     }
-    std::cout << "[average]\t" << sum_iterator_e/10 << "\t" << sum_iterator_ne/10 << "\t" <<  (double)sum_iterator_e/(double)sum_iterator_ne << std::endl;
+    std::cout << "[average]\t" << convert2ms(sum_iterator_e/10) << "ms\t" << convert2ms(sum_iterator_ne/10) << "ms\t" <<  (double)sum_iterator_ne/(double)sum_iterator_e << std::endl;
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
