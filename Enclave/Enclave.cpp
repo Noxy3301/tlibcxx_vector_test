@@ -37,7 +37,8 @@
 
 #include <stdint.h>
 #include <vector>
-#define TUPLE_NUM 10000000
+
+#include "../Include/consts.h"
 
 /* 
  * printf: 
@@ -76,7 +77,7 @@ void ecall_vector_init() {
 }
 
 void ecall_vector_loop() {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         uint64_t ss, ee;
         ss = rdtscp();
         int pos;
@@ -88,7 +89,7 @@ void ecall_vector_loop() {
         e_index_result.emplace_back(ee - ss);
     }
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         uint64_t ss, ee;
         ss = rdtscp();
         int pos = 0;

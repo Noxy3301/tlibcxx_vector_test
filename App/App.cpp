@@ -46,8 +46,8 @@
 #include <thread>
 #include <stdint.h>
 #include <iostream>
-#define TUPLE_NUM 10000000
-#define CLOCKS_PER_US 2900
+
+#include "../Include/consts.h"
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -162,7 +162,7 @@ int SGX_CDECL main(int argc, char *argv[]) {
         test.emplace_back(i);
     }
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         uint64_t ss, ee;
         ss = rdtscp();
         int pos;
@@ -174,7 +174,7 @@ int SGX_CDECL main(int argc, char *argv[]) {
         index_result.emplace_back(ee - ss);
     }
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         uint64_t ss, ee;
         ss = rdtscp();
         int pos = 0;
@@ -190,7 +190,7 @@ int SGX_CDECL main(int argc, char *argv[]) {
     ecall_vector_loop(global_eid);
 
     std::cout << "\t\t" << "tlibcxx\t" << "STL\t" << "(STL)/(tlibcxx)" << std::endl;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         uint64_t ret;
         ecall_getIndexResult(global_eid, &ret, i);
         e_index_result.emplace_back(ret);
@@ -198,15 +198,15 @@ int SGX_CDECL main(int argc, char *argv[]) {
     }
     uint64_t sum_index_ne = 0;
     uint64_t sum_index_e = 0;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         sum_index_ne += index_result[i];
         sum_index_e += e_index_result[i];
     }
-    std::cout << "[average]\t" << convert2ms(sum_index_e/10) << "ms\t" << convert2ms(sum_index_ne/10) << "ms\t" <<  (double)sum_index_ne/(double)sum_index_e << std::endl;
+    std::cout << "[average]\t" << convert2ms(sum_index_e/LOOP_NUM) << "ms\t" << convert2ms(sum_index_ne/LOOP_NUM) << "ms\t" <<  (double)sum_index_ne/(double)sum_index_e << std::endl;
 
     std::cout << std::endl;
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         uint64_t ret;
         ecall_getIteratorResult(global_eid, &ret, i);
         e_iterator_result.emplace_back(ret);
@@ -214,11 +214,16 @@ int SGX_CDECL main(int argc, char *argv[]) {
     }
     uint64_t sum_iterator_ne = 0;
     uint64_t sum_iterator_e = 0;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < LOOP_NUM; i++) {
         sum_iterator_ne += iterator_result[i];
         sum_iterator_e += e_iterator_result[i];
     }
-    std::cout << "[average]\t" << convert2ms(sum_iterator_e/10) << "ms\t" << convert2ms(sum_iterator_ne/10) << "ms\t" <<  (double)sum_iterator_ne/(double)sum_iterator_e << std::endl;
+    std::cout << "[average]\t" << convert2ms(sum_iterator_e/LOOP_NUM) << "ms\t" << convert2ms(sum_iterator_ne/LOOP_NUM) << "ms\t" <<  (double)sum_iterator_ne/(double)sum_iterator_e << std::endl;
+
+    std::cout << "===== Result =====" << std::endl;
+    std::cout << "\t\t" << "tlibcxx\t" << "STL\t" << "(STL)/(tlibcxx)" << std::endl;
+    std::cout << "index_loop:\t" << convert2ms(sum_index_e/LOOP_NUM) << "ms\t" << convert2ms(sum_index_ne/LOOP_NUM) << "ms\t" <<  (double)sum_index_ne/(double)sum_index_e << std::endl;
+    std::cout << "iterator_loop:\t" << convert2ms(sum_iterator_e/LOOP_NUM) << "ms\t" << convert2ms(sum_iterator_ne/LOOP_NUM) << "ms\t" <<  (double)sum_iterator_ne/(double)sum_iterator_e << std::endl;
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
